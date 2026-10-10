@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JPMorgan Chase Live KPI Dashboard: Technology Investment and Operating Leverage</title>
+
+<!-- ============================================================
+     DATA OBJECT (all values hard-coded; no external API calls)
+     Source: w7_JPMC_KPI_Data_Package_Verified.xlsx
+     null = not disclosed (n/d) or not collected on a comparable basis (n/a)
+     ============================================================ -->
+<script>
+const DATA = {
+  company: "JPMorgan Chase & Co.",
+  thesis: "JPMorgan is converting a record technology budget into digital customer scale and operating leverage, so that growth no longer requires proportional growth in branches, headcount, or cost.",
+  years: [2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
+  estYears: { techExpense: [2025], techPct: [2025] },
+  series: {
+    netRevenue:  [100.7, 109.0, 115.6, 120.0, 121.6, 128.7, 158.1, 177.6, 182.4],
+    techExpense: [null, null, 11.7, null, 12.5, 14.3, 15.5, 17.0, 17.9],
+    techPct:     [null, null, 10.1, null, 10.3, 11.1, 9.8, 9.6, 9.8],
+    active:      [46.7, 49.3, 52.4, 55.3, 58.9, 63.1, 67.0, 70.8, 74.6],
+    mobile:      [64.5, 67.5, 71.1, 74.0, 77.2, 78.7, 80.4, 81.7, 82.7],
+    branches:    [5130, 5036, 4976, 4908, 4790, 4787, 4897, 4966, 5083],
+    overhead:    [59.1, 58.1, 56.6, 55.6, 58.6, 59.2, 55.1, 51.7, 52.4],
+    headcount:   [252.5, 256.1, 257.0, 255.4, 271.0, 293.7, 309.9, 317.2, 318.5],
+    revPerEmp:   [399, 426, 450, 470, 449, 438, 510, 560, 573],
+    jdScore:     [null, null, null, 684, 663, 678, 674, 677, 677],
+    jdAvg:       [null, null, null, 657, 652, 648, 653, 658, 666],
+    jdGap:       [null, null, null, 27, 11, 30, 21, 19, 11]
+  },
+  inflections: {
+    overhead: {
+      from: 2022, to: 2023, period: "2022 to 2023",
+      change: "Overhead Ratio fell from 59.2% (2022) to 55.1% (2023) and 51.7% (2024).",
+      cause: "Net revenue jumped 23% in 2023 while noninterest expense grew about 14%, on higher interest rates and the First Republic acquisition."
+    },
+    tech: {
+      from: 2022, to: 2023, period: "2022 to 2023",
+      change: "Technology Expense as % of Net Revenue peaked at 11.1% in 2022 and fell to 9.8% in 2023.",
+      cause: "Revenue grew 23% in 2023 while technology expense grew about 8%, so intensity fell without any cut in spending."
+    },
+    branches: {
+      from: 2022, to: 2023, period: "2022 to 2023",
+      change: "The decline from 5,130 branches (2017) reversed at a 4,787 trough in 2022, then added 110, 69 and 117 branches in 2023, 2024 and 2025.",
+      cause: "The 400-new-branch commitment was completed in 2022, followed by the First Republic acquisition and continued expansion (more than 860 new branches since 2019 per the 2024 shareholder letter)."
+    },
+    revPerEmp: {
+      from: 2020, to: 2022, period: "2020 to 2022",
+      change: "Net Revenue per Employee declined from $470K (2020) to $438K (2022), then rose to $510K in 2023.",
+      cause: "Headcount rose 6% in 2021 and 8% in 2022 ahead of revenue, then revenue outran hiring in 2023."
+    }
+  },
+  sources: [
+    ["Reported Net Revenue (context series)", "JPMorgan Chase Form 10-K and Annual Reports, FY2019, FY2020, FY2022, FY2024 (filed Feb 14, 2025) and 2025 Annual Report", "Reported basis. 2023 includes the First Republic acquisition; 2024 includes a $7.9B Visa share gain."],
+    ["Total Technology Expense ($B)", "JPMorgan Chase Global Technology Investor Day decks (2022, 2023), May 20, 2024 Investor Day deck and transcript, 2025 Investor Day, Feb 2026 update (actuals basis)", "Firm's own total technology expense series. Not disclosed on a consistent basis for 2017, 2018 and 2020 (n/d). 2025 is an estimate (est.)."],
+    ["1. Technology Expense as % of Net Revenue", "Calculated: Total Technology Expense divided by Reported Net Revenue", "2025 is an estimate (est.): management's 2025 technology expense outlook of $17.9B divided by 2025 reported net revenue of $182.4B."],
+    ["2. Active Digital Customers", "JPMorgan Chase Earnings Release Financial Supplements, 4Q20, 1Q22, 4Q25, 1Q26 (Consumer and Community Banking, 90-day active)", "Users of web and/or mobile who logged in within 90 days."],
+    ["3. Mobile Share of Digital Customers", "Calculated: Active Mobile Customers divided by Active Digital Customers (same Financial Supplements)", "The donut shows 2025 mobile versus digital customers not on mobile (100% minus mobile share)."],
+    ["4. Chase Branch Count", "JPMorgan Chase Earnings Release Financial Supplements and Consumer and Community Banking year-end branch network disclosures; 2022 and 2024 line-of-business shareholder letters", "Year-end physical branches. 2023 includes First Republic branches."],
+    ["5. Overhead Ratio", "JPMorgan Chase Form 10-K five-year financial summary (FY2019, FY2020, FY2022, FY2024) and 2025 Annual Report", "Noninterest expense divided by net revenue, reported basis."],
+    ["Total Headcount (context series)", "JPMorgan Chase Form 10-K year-end employee counts and Annual Reports, Financial Highlights", "2017 to 2019 headcount came from a secondary compilation and should be confirmed against the 10-K."],
+    ["6. Net Revenue per Employee", "Calculated: Reported Net Revenue divided by year-end Total Headcount", "In $ thousands. 2023 headcount includes First Republic."],
+    ["Chase J.D. Power Score and National Study Average", "J.D. Power U.S. National Banking Satisfaction Study press releases: 2022, Dec 14, 2023, Dec 12, 2024, Dec 11, 2025 (2020 and 2021 values from the study releases for those years)", "1,000-point scale. The 2024 study average is derived from the 2025 release (666, described as 8 points above 2024)."],
+    ["7. J.D. Power Satisfaction Gap vs. Study Average", "Calculated: Chase J.D. Power Score minus National Study Average", "J.D. Power redefined \"national bank\" over time (deposit threshold of $200B in 2022, $250B in 2025)."],
+    ["Total technology investment, 2026 plan", "jpmorgan.com/technology", "$19.8B 2026 technology investment (reference only; not charted)."]
+  ]
+};
+</script>
+
+<style>
+  :root{
+    --bg-top:#EEF5FC; --bg-bottom:#DCE9F7;
+    --card:#FFFFFF; --ink:#0E1B2E; --muted:#576A82; --line:#DCE4EE; --grid:#E8EDF4;
+    --navy:#0B2A4A; --navy-2:#10407A;
+    --lead:#12A39A; --lead-soft:#D9F3F0; --lead-ink:#0B6F69;
+    --lag:#3B49C9;  --lag-soft:#E3E6FB; --lag-ink:#3B49C9;
+    --amber:#D99A1E; --amber-soft:#FFF4D9; --amber-ink:#7A4A00;
+    --good:#17794F; --watch:#B4470C; --neutral:#576A82;
+    --font:"Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+    --serif:Georgia, "Iowan Old Style", "Times New Roman", serif;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; color:var(--ink); font-family:var(--font); line-height:1.4;
+    background:linear-gradient(180deg,var(--bg-top) 0%,var(--bg-bottom) 100%) fixed; background-color:#E3EEFA;
+  }
+  body{background:radial-gradient(1100px 480px at 0% -8%, #DCE7F6 0%, rgba(220,231,246,0) 62%), linear-gradient(180deg,#F5F8FC 0%,#E8EEF7 100%) fixed; background-color:#EDF2F9}
+  .page{max-width:1480px; margin:0 auto; padding:14px 16px 30px}
+  a{color:var(--navy-2)}
+  :focus-visible{outline:3px solid var(--amber); outline-offset:2px}
+
+  /* ---------- Header ---------- */
+  .top{
+    display:grid; grid-template-columns:minmax(0,1fr) auto; gap:24px; align-items:center;
+    background:linear-gradient(115deg,var(--navy) 0%,var(--navy-2) 100%); color:#fff;
+    border-radius:14px; padding:16px 24px 15px; box-shadow:0 8px 24px rgba(10,42,94,.18);
+  }
+  .top .title{display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 16px}
+  .top{background:radial-gradient(760px 240px at 94% -30%, rgba(217,154,30,.34) 0%, rgba(217,154,30,0) 62%), linear-gradient(115deg,#071E3D 0%,#0F3D6E 100%)}
+  .top .thesis{border-left:3px solid var(--amber); padding-left:12px}
+  .top h1{margin:0; font-family:var(--serif); font-size:28px; line-height:1.15; font-weight:700; letter-spacing:-.01em}
+  .top .sub{margin:0; font-size:13px; color:#BCD5F5}
+  .top .thesis{margin:6px 0 0; max-width:880px; font-size:14.5px; line-height:1.45; color:#fff}
+  .legend{display:grid; grid-template-columns:auto auto; gap:6px 22px; font-size:12px; color:#DCEBFF; margin:0; padding:0; list-style:none}
+  .legend li{display:flex; align-items:center; gap:8px}
+  .sw{width:20px; height:11px; border-radius:3px; display:inline-block; flex:none}
+  .sw.lead{background:var(--lead)} .sw.lag{background:#8A94F0}
+  .sw.infl{background:rgba(217,154,30,.35); border:1.5px dashed var(--amber)}
+  .sw.est{background:repeating-linear-gradient(135deg,#fff 0 3px,#8FD3CC 3px 6px); border:1px solid #8FD3CC}
+
+  /* ---------- Findings ---------- */
+  .findings{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:12px}
+  .find{background:var(--card); border-radius:10px; padding:10px 14px; border-left:5px solid var(--amber); box-shadow:0 1px 8px rgba(11,37,69,.07)}
+  .find h2{margin:0 0 2px; font-size:13.5px; line-height:1.3}
+  .find p{margin:0; font-size:12px; color:var(--muted); line-height:1.4}
+
+  /* ---------- Scorecards ---------- */
+  .band-title{display:flex; align-items:baseline; gap:10px; margin:14px 2px 6px; font-size:13.5px; font-weight:700; color:var(--navy)}
+  .band-title span{font-weight:400; font-size:12px; color:var(--muted)}
+  .scorecards{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:10px}
+  .kpi{background:var(--card); border-radius:10px; padding:9px 12px 9px; box-shadow:0 1px 8px rgba(11,37,69,.07); border-top:3px solid var(--lead); display:flex; flex-direction:column; gap:2px; min-width:0}
+  .kpi.lagging{border-top-color:var(--lag)}
+  .kpi{background:linear-gradient(180deg,#EDFAF8 0%,#FFFFFF 62%)}
+  .kpi.lagging{background:linear-gradient(180deg,#EEF0FD 0%,#FFFFFF 62%)}
+  .kpi-top{display:flex; justify-content:space-between; align-items:center; gap:6px}
+  .kpi-name{font-size:11.5px; font-weight:600; line-height:1.3; min-height:45px; margin-top:3px}
+  .kpi-val{font-family:var(--serif); font-size:24px; font-weight:700; letter-spacing:-.02em; line-height:1.1}
+  .kpi-val small{font-family:var(--font); font-size:11px; font-weight:600; color:var(--muted); margin-left:4px}
+  .kpi-base{font-size:11.5px; color:var(--muted)}
+  .kpi-delta{font-size:11.5px; font-weight:700; line-height:1.3}
+  .tone-good{color:var(--good)} .tone-watch{color:var(--watch)} .tone-neutral{color:var(--neutral)}
+  .pill{display:inline-block; font-size:11px; font-weight:700; padding:1px 8px; border-radius:999px; white-space:nowrap}
+  .pill.lead{background:var(--lead-soft); color:var(--lead-ink)}
+  .pill.lag{background:var(--lag-soft); color:var(--lag-ink)}
+
+  /* ---------- Extras: verdict, filter chips, sparklines ---------- */
+  .verdict{margin-top:10px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; background:#fff; border-radius:10px; padding:9px 16px; box-shadow:0 1px 8px rgba(11,37,69,.07); font-size:13px}
+  .verdict strong{font-family:var(--serif); font-size:15px; color:var(--navy)}
+  .verdict .tests{display:flex; gap:8px; flex-wrap:wrap; margin-left:auto}
+  .vt{display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600; padding:3px 10px; border-radius:999px; background:#EEF4FB; color:var(--ink)}
+  .vt b{display:inline-block; width:9px; height:9px; border-radius:50%}
+  .vt.yes b{background:var(--good)} .vt.no b{background:var(--watch)} .vt.part b{background:var(--amber)}
+  .chips{display:inline-flex; gap:6px; margin-left:auto}
+  .chip{font:600 11.5px var(--font); padding:3px 12px; border-radius:999px; border:1.5px solid var(--line); background:#fff; color:var(--muted); cursor:pointer}
+  .chip[aria-pressed="true"]{background:var(--navy); border-color:var(--navy); color:#fff}
+  .chip.lead[aria-pressed="true"]{background:var(--lead); border-color:var(--lead)}
+  .chip.lag[aria-pressed="true"]{background:var(--lag); border-color:var(--lag)}
+  .band-title.row{align-items:center}
+  .yearbar{display:grid; grid-template-columns:auto minmax(240px,1.1fr) auto minmax(0,1.7fr) auto; gap:16px; align-items:center; background:#fff; border-radius:10px; padding:8px 16px; margin-bottom:10px; box-shadow:0 1px 8px rgba(11,37,69,.07)}
+  .yb-label{font-weight:700; font-size:13px; color:var(--navy)}
+  .yb-slider input{width:100%; margin:0; height:20px; accent-color:var(--navy-2); cursor:pointer}
+  .yb-ticks{display:flex; justify-content:space-between; padding:0 7px; font-size:11px; color:var(--muted); line-height:1.2}
+  .yb-read{display:flex; align-items:baseline; gap:8px; min-width:118px}
+  .yb-year{font-family:var(--serif); font-size:28px; font-weight:700; color:var(--navy); line-height:1}
+  .yb-tag{font-size:11px; font-weight:700; padding:1px 9px; border-radius:999px; background:var(--amber-soft); color:var(--amber-ink); border:1px solid #F2D49B}
+  .yb-caption{margin:0; font-size:12px; line-height:1.4; color:var(--muted)}
+  .kpi-val .nd{font-family:var(--font); font-size:16px; font-style:italic; font-weight:600; color:#6F8499}
+  .kpi{cursor:pointer; transition:opacity .25s, box-shadow .25s}
+  .kpi:hover{box-shadow:0 4px 14px rgba(11,37,69,.16)}
+  .kpi .spark{display:block; width:100%; height:22px; margin-top:3px}
+  .dim{opacity:.28}
+  .pulse{animation:pulse 1.6s ease-out 1}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(217,154,30,.9)} 70%{box-shadow:0 0 0 12px rgba(217,154,30,0)} 100%{box-shadow:0 0 0 0 rgba(217,154,30,0)}}
+
+  /* ---------- Chart board (4 x 2) ---------- */
+  .board{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px}
+  .card{background:var(--card); border-radius:12px; padding:11px 14px 10px; box-shadow:0 1px 8px rgba(11,37,69,.08); display:flex; flex-direction:column; min-width:0; border-top:3px solid var(--lead)}
+  .card.lag{border-top-color:var(--lag)}
+  .card{border-radius:14px; box-shadow:0 1px 2px rgba(14,27,46,.06), 0 8px 22px rgba(14,27,46,.07)}
+  .card.hero{background:linear-gradient(165deg,#0B2A4A 0%,#12437F 100%); color:#fff; border-top:3px solid var(--amber); box-shadow:0 10px 28px rgba(11,42,74,.35)}
+  .card.hero h3{color:#fff}
+  .card.hero .insight{color:#C5D3EA}
+  .card.hero .pill.lag{background:rgba(255,255,255,.16); color:#fff}
+  .card.hero .note{background:rgba(217,154,30,.18); border-left-color:var(--amber); color:#F3EAD3}
+  .card.hero .note .period{color:#F7CE74}
+  .card.hero .note b{color:#fff}
+  .verdict{border-left:5px solid var(--amber)}
+  .card-head{display:flex; justify-content:space-between; align-items:flex-start; gap:8px}
+  .card h3{margin:0; font-size:13.5px; line-height:1.3; letter-spacing:-.003em}
+  .card .insight{margin:2px 0 6px; font-size:12px; color:var(--muted); line-height:1.4}
+  .chart-box{position:relative; height:132px; width:100%}
+  .chart-err{display:none; padding:10px; background:#FDECEA; color:#8A1F11; border-radius:8px; font-size:12px; margin-top:6px}
+  .mini{display:flex; flex-wrap:wrap; gap:2px 12px; margin:5px 0 0; font-size:11px; color:var(--muted)}
+  .mini span{display:inline-flex; align-items:center; gap:5px}
+  .mini i{display:inline-block; width:12px; height:8px; border-radius:2px}
+  .note{margin-top:8px; background:var(--amber-soft); border-left:4px solid var(--amber); border-radius:6px; padding:7px 10px; font-size:11.5px; line-height:1.42}
+  .note .period{font-weight:700; color:var(--amber-ink); display:block; margin-bottom:1px}
+  .note b{color:var(--ink)}
+  .obs{margin-top:8px; background:#EFF3F9; border-left:4px solid #8A9BB8; border-radius:6px; padding:7px 10px; font-size:11.5px; line-height:1.42}
+  .obs b{color:var(--ink)}
+  .foot{margin:auto 0 0; padding-top:6px; font-size:11px; color:var(--muted)}
+  .jump{margin:10px 2px 0; font-size:12px; color:var(--muted)}
+
+  /* ---------- Evidence (below the first screen) ---------- */
+  .evidence h2{margin:22px 2px 2px; font-size:16px; color:var(--navy)}
+  .evidence .section-sub{margin:0 2px 8px; font-size:12px; color:var(--muted)}
+  .table-wrap{overflow-x:auto; background:var(--card); border-radius:12px; box-shadow:0 1px 8px rgba(11,37,69,.08); padding:4px 8px}
+  table{border-collapse:collapse; width:100%; font-size:12px; font-variant-numeric:tabular-nums}
+  th,td{padding:7px 9px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap}
+  th:first-child,td:first-child{text-align:left; white-space:normal; min-width:270px}
+  thead th{font-weight:700; color:var(--navy); border-bottom:2px solid var(--navy-2); background:#fff}
+  tbody tr:last-child td{border-bottom:none}
+  tr.context td{color:var(--muted); background:#F6FAFE}
+  td.nd{color:#6F8499; font-style:italic}
+  td.est{font-style:italic; color:var(--amber-ink); font-weight:600}
+  .tag{display:inline-block; font-size:11px; font-weight:700; padding:0 7px; border-radius:999px; margin-left:6px; vertical-align:1px}
+  .tag.lead{background:var(--lead-soft); color:var(--lead-ink)} .tag.lag{background:var(--lag-soft); color:var(--lag-ink)}
+  table.sources td{white-space:normal; text-align:left; vertical-align:top}
+  table.sources td:first-child{font-weight:600; min-width:220px}
+  table.sources th{text-align:left}
+  .two{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:12px}
+  .panel{background:var(--card); border-radius:12px; padding:14px 18px; font-size:12.5px; box-shadow:0 1px 8px rgba(11,37,69,.08)}
+  .panel h3{margin:0 0 6px; font-size:14px; color:var(--navy)}
+  .panel ul{margin:0; padding-left:18px} .panel li{margin-bottom:6px}
+  .panel li b{color:var(--ink)}
+  footer{margin-top:20px; font-size:12px; color:var(--muted); text-align:center; line-height:1.6}
+
+  @media (max-width:1100px){
+    .yearbar{grid-template-columns:1fr}
+    .scorecards{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .board{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .findings,.two{grid-template-columns:1fr}
+    .top{grid-template-columns:1fr}
+  }
+  @media (max-width:640px){
+    .scorecards,.board{grid-template-columns:1fr}
+    .top h1{font-size:24px}
+  }
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important; transition:none!important} }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+</head>
+
+<body>
+<div class="page">
+
+  <!-- 1. Company header with one-sentence transformation thesis -->
+  <header class="top">
+    <div>
+      <div class="title">
+        <h1>JPMorgan Chase &amp; Co.</h1>
+        <p class="sub">Live KPI Dashboard: is technology investment creating operating leverage? Calendar years 2017 to 2025</p>
+      </div>
+      <p class="thesis" id="thesis"></p>
+    </div>
+    <ul class="legend" aria-label="Legend">
+      <li><span class="sw lead"></span>Leading indicator</li>
+      <li><span class="sw lag"></span>Lagging indicator</li>
+      <li><span class="sw infl"></span>Annotated inflection point</li>
+      <li><span class="sw est"></span>Estimate (est.)</li>
+    </ul>
+  </header>
+
+  <section class="findings" aria-label="Key findings">
+    <div class="find"><h2>Efficiency arrived in 2023, not through digital adoption</h2>
+      <p>Overhead Ratio fell from 59.2% in 2022 to 51.7% in 2024 after net revenue jumped 23% in 2023. Active Digital Customers grew 5% to 7% every year with no step change.</p></div>
+    <div class="find"><h2>Technology intensity did not run ahead of the business</h2>
+      <p>Technology Expense as % of Net Revenue stayed between 9.6% and 11.1% in every disclosed year, peaking at 11.1% in 2022 before revenue outgrew spending.</p></div>
+    <div class="find"><h2>Branches rebounded and the satisfaction gap narrowed</h2>
+      <p>Chase Branch Count rose from a 4,787 trough in 2022 to 5,083 in 2025, while the J.D. Power Satisfaction Gap vs. Study Average narrowed from 30 to 11 points.</p></div>
+  </section>
+
+  <div class="verdict" aria-label="Bottom line">
+    <strong>Bottom line: resilience proven, leverage not yet.</strong>
+    <span>Three tests of the thesis, read from the charts below:</span>
+    <div class="tests">
+      <span class="vt no"><b></b>Digital adoption accelerated? No step change</span>
+      <span class="vt part"><b></b>Tech intensity fell? Yes, driven by 2023 revenue</span>
+      <span class="vt yes"><b></b>Overhead Ratio improved? Yes, 59.2% to 52.4%</span>
+    </div>
+  </div>
+
+  <!-- 4. Metric summary row: most recent value vs baseline -->
+  <div class="band-title row">Scorecard: latest versus baseline <span>Drag the year slider to see every metric as of any year. Click a card to jump to its chart.</span>
+    <div class="chips" role="group" aria-label="Filter by indicator type">
+      <button class="chip" type="button" data-filter="all" aria-pressed="true">All 7</button>
+      <button class="chip lead" type="button" data-filter="lead" aria-pressed="false">Leading</button>
+      <button class="chip lag" type="button" data-filter="lag" aria-pressed="false">Lagging</button>
+    </div>
+  </div>
+  <div class="yearbar" id="yearbar">
+    <label class="yb-label" for="year-slider">Year</label>
+    <div class="yb-slider">
+      <input type="range" id="year-slider" min="0" max="8" step="1" value="8" aria-describedby="year-caption">
+      <div class="yb-ticks" aria-hidden="true"></div>
+    </div>
+    <div class="yb-read"><span class="yb-year" id="year-readout">2025</span><span class="yb-tag" id="year-tag">Latest</span></div>
+    <p class="yb-caption" id="year-caption" aria-live="polite"></p>
+    <button class="chip" type="button" id="year-reset" style="visibility:hidden">Back to 2025</button>
+  </div>
+  <section class="scorecards" id="scorecards" aria-label="Metric summary"></section>
+
+  <!-- 2 + 3. Eight charts with inflection annotations -->
+  <div class="band-title">Outcome and investment tests <span>Four charts carry an annotated inflection point: shaded band on the chart, explanation underneath.</span></div>
+  <section class="board" aria-label="Charts with annotated inflection points">
+    <article id="card-overhead" data-type="lag" class="card lag hero">
+      <div class="card-head"><h3>5. Overhead Ratio</h3><span class="pill lag">Lagging</span></div>
+      <p class="insight">Noninterest expense as a share of net revenue dropped about seven points in two years.</p>
+      <div class="chart-box"><canvas id="c-overhead" role="img" aria-label="Line chart of Overhead Ratio, 2017 to 2025, with the 2022 to 2023 inflection highlighted"></canvas></div>
+      <div class="chart-err" id="e-overhead"></div>
+      <div class="note" data-note="overhead"></div>
+    </article>
+
+    <article id="card-revemp" data-type="lag" class="card lag">
+      <div class="card-head"><h3>6. Net Revenue per Employee</h3><span class="pill lag">Lagging</span></div>
+      <p class="insight">Productivity slipped while hiring ran ahead of revenue, then rebounded sharply.</p>
+      <div class="chart-box"><canvas id="c-revemp" role="img" aria-label="Bar chart of Net Revenue per Employee with a headcount line, 2017 to 2025"></canvas></div>
+      <div class="mini"><span><i style="background:#3B49C9"></i>$ thousands per employee (left)</span><span><i style="background:#8A9BB8"></i>Headcount, thousands (right)</span></div>
+      <div class="chart-err" id="e-revemp"></div>
+      <div class="note" data-note="revPerEmp"></div>
+    </article>
+
+    <article id="card-tech" data-type="lead" class="card">
+      <div class="card-head"><h3>1. Technology Expense as % of Net Revenue</h3><span class="pill lead">Leading</span></div>
+      <p class="insight">Spending kept rising in dollars, but intensity peaked in 2022 and then fell as revenue surged.</p>
+      <div class="chart-box"><canvas id="c-tech" role="img" aria-label="Combination chart: Total Technology Expense in billions of dollars as bars and Technology Expense as percent of Net Revenue as a line, 2019 to 2025"></canvas></div>
+      <div class="mini"><span><i style="background:#A7DDD8"></i>Total tech expense, $B (left)</span><span><i style="background:#12A39A"></i>% of net revenue (right)</span><span>Hatched = est. 2025</span></div>
+      <div class="chart-err" id="e-tech"></div>
+      <div class="note" data-note="tech"></div>
+    </article>
+
+    <article id="card-branch" data-type="lead" class="card">
+      <div class="card-head"><h3>4. Chase Branch Count</h3><span class="pill lead">Leading</span></div>
+      <p class="insight">A test of the thesis: digital growth did not shrink the network.</p>
+      <div class="chart-box"><canvas id="c-branch" role="img" aria-label="Bar chart of Chase Branch Count, 2017 to 2025, with the 2022 to 2023 reversal highlighted"></canvas></div>
+      <div class="chart-err" id="e-branch"></div>
+      <div class="note" data-note="branches"></div>
+    </article>
+  </section>
+
+  <div class="band-title">Digital adoption and customer experience <span>The remaining leading and lagging indicators.</span></div>
+  <section class="board" aria-label="Digital adoption and customer experience charts">
+    <article id="card-active" data-type="lead" class="card">
+      <div class="card-head"><h3>2. Active Digital Customers</h3><span class="pill lead">Leading</span></div>
+      <p class="insight">Steady growth of 5% to 7% a year with no acceleration after the technology budget stepped up.</p>
+      <div class="chart-box"><canvas id="c-active" role="img" aria-label="Line chart of Active Digital Customers in millions, 2017 to 2025"></canvas></div>
+      <div class="chart-err" id="e-active"></div>
+      <div class="obs"><b>Reading the trend:</b> Total Technology Expense rose from $11.7B (2019) to $17.9B est. (2025) with no step change in adoption.</div>
+    </article>
+
+    <article id="card-mobile" data-type="lead" class="card">
+      <div class="card-head"><h3>3. Mobile Share of Digital Customers</h3><span class="pill lead">Leading</span></div>
+      <p class="insight">Migration to mobile is nearly saturated: gains shrank from over three points a year to one.</p>
+      <div class="chart-box"><canvas id="c-mobile" role="img" aria-label="Line chart of Mobile Share of Digital Customers, 2017 to 2025"></canvas></div>
+      <div class="chart-err" id="e-mobile"></div>
+      <div class="obs"><b>Reading the trend:</b> annual gains were about 3 points through 2021 and 1 point in 2025.</div>
+    </article>
+
+    <article id="card-donut" data-type="lead" class="card">
+      <div class="card-head"><h3>2025 digital customer mix</h3><span class="pill lead">Leading</span></div>
+      <p class="insight">Share of active digital customers using mobile (metric 3, 2025).</p>
+      <div class="chart-box"><canvas id="c-donut" role="img" aria-label="Donut chart: 82.7 percent of digital customers use mobile in 2025"></canvas></div>
+      <div class="chart-err" id="e-donut"></div>
+      <div class="obs"><b>Reading the mix:</b> about one in six digital customers is not yet on mobile.</div>
+    </article>
+
+    <article id="card-jd" data-type="lag" class="card lag">
+      <div class="card-head"><h3>7. J.D. Power Satisfaction Gap vs. Study Average</h3><span class="pill lag">Lagging</span></div>
+      <p class="insight">Chase still leads the study, but the premium over the average has narrowed.</p>
+      <div class="chart-box"><canvas id="c-jd" role="img" aria-label="Bar chart of the J.D. Power satisfaction gap versus study average, 2020 to 2025"></canvas></div>
+      <div class="chart-err" id="e-jd"></div>
+      <div class="obs"><b>Reading the trend:</b> from 2022 to 2025 the study average rose 18 points (648 to 666) while Chase held flat (678 to 677).</div>
+    </article>
+  </section>
+  <p class="jump">Full data table, source attribution and calculation notes are below: <a href="#data">data table</a>, <a href="#sources">sources</a>, <a href="#notes">context and notes</a>.</p>
+
+  <!-- 4 + 5. Data table, sources, context -->
+  <div class="evidence">
+    <h2 id="data">Data table</h2>
+    <p class="section-sub">Every series behind the charts, including the context series used to calculate ratios. n/d = not disclosed on a consistent basis; n/a = not collected on a comparable basis; est. = estimate.</p>
+    <div class="table-wrap"><table id="data-table" aria-label="Data table of all dashboard series"></table></div>
+
+    <h2 id="sources">Source attribution</h2>
+    <p class="section-sub">Every data series in the charts is listed below. All figures trace to named public disclosures.</p>
+    <div class="table-wrap"><table class="sources" id="sources-table" aria-label="Source attribution"></table></div>
+
+    <div class="two" id="notes">
+      <div class="panel">
+        <h3>Context that affects how to read these charts</h3>
+        <ul>
+          <li><b>Rate cycle.</b> Net interest income makes revenue rate-sensitive. Net revenue rose 23% in 2023, so the Overhead Ratio and Net Revenue per Employee partly reflect interest rates, not only technology.</li>
+          <li><b>First Republic (May 2023).</b> The acquisition inflates 2023 headcount, branches and revenue.</li>
+          <li><b>Visa share gain (2024).</b> A $7.9B gain lifted 2024 reported net revenue.</li>
+          <li><b>Technology expense basis.</b> The series is the firm's own total technology expense. Earlier "tech budget" figures use a narrower definition and are not comparable. Investor-day decks differ slightly for 2022 to 2023 ($14.1B vs $14.3B; $15.3B vs $15.5B); this dashboard uses the latest actuals basis.</li>
+          <li><b>J.D. Power study.</b> J.D. Power redefined "national bank" over time ($200B deposit threshold in 2022, $250B in 2025); the 2024 study average is derived from the 2025 release.</li>
+          <li><b>2026 outlook.</b> The firm plans $19.8B of technology investment in 2026 (reference only, not charted).</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Estimation and calculation notes</h3>
+        <ul>
+          <li><b>2025 Total Technology Expense ($17.9B) is an estimate.</b> It is management's technology expense outlook, not a reported actual. The 2025 Technology Expense as % of Net Revenue (9.8% est.) is calculated from it. Both are labeled "est." and should be replaced once the 2025 annual report figure is confirmed.</li>
+          <li><b>Calculated series:</b> Technology Expense as % of Net Revenue, Mobile Share of Digital Customers, Net Revenue per Employee and the J.D. Power Satisfaction Gap are calculated from disclosed inputs; formulas are shown in the source table.</li>
+          <li><b>Not disclosed:</b> Total Technology Expense for 2017, 2018 and 2020 is not disclosed on a consistent basis (n/d), so the technology chart starts in 2019 and its line spans the 2020 gap with a dashed segment.</li>
+          <li><b>Window:</b> all series cover every year available from 2017 (or the first disclosed year) through 2025. Unfavorable years are kept in the data.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Value &amp; KPIs, Session B Group Activity, Group 11.<br>
+    Metric Selector: Shahzaib Ali &nbsp;|&nbsp; Data Analyst: Nazifa Maliha &nbsp;|&nbsp; Dashboard Builder: Roopa Shankar Rao
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- helpers ---------- */
+  var Y = DATA.years, YL = Y.map(String), S = DATA.series;
+  var FONT = '"Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif';
+  var INK = '#0E1B2E', MUTED = '#576A82', GRID = '#E8EDF4';
+  var LEAD = '#12A39A', LAG = '#3B49C9', AMBER = '#D99A1E', SLATE = '#8A9BB8';
+
+  function $(sel) { return document.querySelector(sel); }
+  function fx(v, d) { return Number(v).toFixed(d); }
+  function signed(x, d) { return (x > 0 ? '+' : x < 0 ? '\u2212' : '') + Math.abs(x).toFixed(d); }
+  function pctChange(b, l) { return signed((l / b - 1) * 100, 0) + '%'; }
+  function commas(v) { return Number(v).toLocaleString('en-US'); }
+  function from(y) { return Y.indexOf(y); }
+  function sliceFrom(arr, y) { return arr.slice(from(y)); }
+  function labelsFrom(y) { return YL.slice(from(y)); }
+  function isEst(key, year) { return (DATA.estYears[key] || []).indexOf(year) !== -1; }
+  // indexes of the given years inside a labels array (used to choose which points get value labels)
+  function at(labels, years) { return years.map(function (y) { return labels.indexOf(String(y)); }).filter(function (i) { return i >= 0; }); }
+
+  $('#thesis').textContent = DATA.thesis;
+
+  /* ---------- scorecards (baseline vs latest) ---------- */
+  var METRICS = [
+    { n: 1, name: 'Technology Expense as % of Net Revenue', type: 'Leading', key: 'techPct', tone: 'neutral',
+      fmt: function (v) { return fx(v, 1) + '%'; }, delta: function (b, l) { return signed(l - b, 1) + ' pts'; } },
+    { n: 2, name: 'Active Digital Customers', type: 'Leading', key: 'active', tone: 'good',
+      fmt: function (v) { return fx(v, 1) + 'M'; }, delta: function (b, l) { return signed(l - b, 1) + 'M (' + pctChange(b, l) + ')'; } },
+    { n: 3, name: 'Mobile Share of Digital Customers', type: 'Leading', key: 'mobile', tone: 'good',
+      fmt: function (v) { return fx(v, 1) + '%'; }, delta: function (b, l) { return signed(l - b, 1) + ' pts'; } },
+    { n: 4, name: 'Chase Branch Count', type: 'Leading', key: 'branches', tone: 'neutral',
+      fmt: function (v) { return commas(v); }, delta: function (b, l) { return signed(l - b, 0) + ' (' + pctChange(b, l) + ')'; } },
+    { n: 5, name: 'Overhead Ratio', type: 'Lagging', key: 'overhead', tone: 'good',
+      fmt: function (v) { return fx(v, 1) + '%'; }, delta: function (b, l) { return signed(l - b, 1) + ' pts (lower is better)'; } },
+    { n: 6, name: 'Net Revenue per Employee', type: 'Lagging', key: 'revPerEmp', tone: 'good',
+      fmt: function (v) { return '$' + commas(v) + 'K'; }, delta: function (b, l) { return signed(l - b, 0) + 'K (' + pctChange(b, l) + ')'; } },
+    { n: 7, name: 'J.D. Power Satisfaction Gap vs. Study Average', type: 'Lagging', key: 'jdGap', tone: 'watch',
+      fmt: function (v) { return '+' + fx(v, 0) + ' pts'; }, delta: function (b, l) { return signed(l - b, 0) + ' pts (premium narrowed)'; } }
+  ];
+
+  var CARD_OF = { techPct: 'card-tech', active: 'card-active', mobile: 'card-mobile', branches: 'card-branch', overhead: 'card-overhead', revPerEmp: 'card-revemp', jdGap: 'card-jd' };
+  var MISS = { techPct: 'n/d', jdGap: 'n/a' };
+  var reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var currentFilter = 'all', countCancel = false, LAST = Y.length - 1;
+
+  // Inline SVG sparkline (not a Chart.js chart, so the chart count stays at eight). The dot marks the selected year.
+  function sparkline(arr, color, sel) {
+    var pts = [], dot = null, i, vals = arr.filter(function (v) { return v != null; });
+    var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals), span = (max - min) || 1;
+    for (i = 0; i < arr.length; i++) {
+      if (arr[i] == null) continue;
+      var pt = [ (i / (arr.length - 1)) * 96 + 2, 20 - ((arr[i] - min) / span) * 16 ];
+      pts.push(pt);
+      if (i === sel) dot = pt;
+    }
+    var d = pts.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ');
+    return '<svg class="spark" viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true">' +
+      '<polyline points="' + d + '" fill="none" stroke="' + color + '" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>' +
+      (dot ? '<circle cx="' + dot[0].toFixed(1) + '" cy="' + dot[1].toFixed(1) + '" r="2.6" fill="' + color + '"/>' : '') + '</svg>';
+  }
+
+  // Change versus baseline for any year (the metric's own wording is used for the latest year only).
+  function neutralDelta(m, b, v) {
+    switch (m.key) {
+      case 'active': return signed(v - b, 1) + 'M (' + pctChange(b, v) + ')';
+      case 'branches': return signed(v - b, 0) + ' (' + pctChange(b, v) + ')';
+      case 'revPerEmp': return signed(v - b, 0) + 'K (' + pctChange(b, v) + ')';
+      case 'jdGap': return signed(v - b, 0) + ' pts';
+      default: return signed(v - b, 1) + ' pts';
+    }
+  }
+
+  function applyFilter() {
+    document.querySelectorAll('.kpi, .card[data-type]').forEach(function (n) {
+      n.classList.toggle('dim', currentFilter !== 'all' && n.getAttribute('data-type') !== currentFilter);
+    });
+  }
+
+  // Scorecards as of the selected year (index into DATA.years). Default is the latest year.
+  function renderScorecards(idx) {
+    var html = '';
+    METRICS.forEach(function (m) {
+      var arr = S[m.key], bi = -1, i;
+      for (i = 0; i < arr.length; i++) { if (arr[i] != null) { bi = i; break; } }
+      var b = arr[bi], v = arr[idx], est = v != null && isEst(m.key, Y[idx]);
+      var cls = m.type === 'Leading' ? 'lead' : 'lag', valHtml, deltaHtml, tone = 'neutral';
+      if (v == null) {
+        valHtml = '<span class="nd">' + (MISS[m.key] || 'n/a') + '</span>';
+        deltaHtml = 'Not disclosed on a comparable basis in ' + Y[idx];
+      } else {
+        valHtml = m.fmt(v) + (est ? '<small>est.</small>' : '');
+        if (idx === LAST) { deltaHtml = m.delta(b, v); tone = m.tone; }
+        else if (idx === bi) { deltaHtml = 'Baseline year'; }
+        else { deltaHtml = neutralDelta(m, b, v) + ' vs. baseline'; }
+      }
+      html += '<div class="kpi ' + (m.type === 'Lagging' ? 'lagging' : '') + '" data-type="' + cls + '" data-card="' + CARD_OF[m.key] + '" tabindex="0" role="button" aria-label="' + m.name + ': jump to chart">' +
+        '<div class="kpi-top"><span class="pill ' + cls + '">' + m.type + '</span></div>' +
+        '<div class="kpi-name">' + m.n + '. ' + m.name + '</div>' +
+        '<div class="kpi-val">' + valHtml + '</div>' +
+        sparkline(arr, cls === 'lead' ? LEAD : LAG, idx) +
+        '<div class="kpi-base">Baseline ' + m.fmt(b) + ' in ' + Y[bi] + '</div>' +
+        '<div class="kpi-delta tone-' + tone + '">' + deltaHtml + '</div></div>';
+    });
+    $('#scorecards').innerHTML = html;
+    applyFilter();
+  }
+  renderScorecards(LAST);
+
+  // One page-load moment: scorecard values count up from the baseline to the latest value.
+  (function countUp() {
+    if (reduceMotion || typeof requestAnimationFrame !== 'function') return;
+    var t0 = null, dur = 900, nodes = document.querySelectorAll('.kpi-val'), jobs = [];
+    METRICS.forEach(function (m, idx) {
+      var arr = S[m.key], b = arr.filter(function (v) { return v != null; })[0], l = arr[LAST];
+      if (nodes[idx]) jobs.push({ el: nodes[idx], m: m, b: b, l: l, est: isEst(m.key, Y[LAST]) });
+    });
+    function frame(t) {
+      if (countCancel) return;
+      if (t0 === null) t0 = t;
+      var p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+      jobs.forEach(function (j) { j.el.innerHTML = j.m.fmt(p === 1 ? j.l : j.b + (j.l - j.b) * e) + (j.est ? '<small>est.</small>' : ''); });
+      if (p < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  })();
+
+  // Click (or Enter) on a scorecard jumps to its chart and pulses it.
+  function jump(card) {
+    var target = document.getElementById(card.getAttribute('data-card'));
+    if (!target) return;
+    target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+    target.classList.remove('pulse'); void target.offsetWidth; target.classList.add('pulse');
+  }
+  $('#scorecards').addEventListener('click', function (e) { var k = e.target.closest('.kpi'); if (k) jump(k); });
+  $('#scorecards').addEventListener('keydown', function (e) {
+    var k = e.target.closest && e.target.closest('.kpi');
+    if (k && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); jump(k); }
+  });
+
+  // Leading / Lagging filter dims everything of the other type.
+  document.querySelectorAll('.chip[data-filter]').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      currentFilter = chip.getAttribute('data-filter');
+      document.querySelectorAll('.chip[data-filter]').forEach(function (c) { c.setAttribute('aria-pressed', c === chip ? 'true' : 'false'); });
+      applyFilter();
+    });
+  });
+
+  /* ---------- year slider: scorecards and chart markers follow the selected year ---------- */
+  var EVENTS = {
+    2017: 'Baseline year for most series: Overhead Ratio 59.1%, 5,130 branches, 46.7M active digital customers.',
+    2018: 'No annotated event. Branch Count (5,036) and Overhead Ratio (58.1%) keep edging down.',
+    2019: 'Total technology expense is first disclosed on a consistent basis: $11.7B, or 10.1% of net revenue.',
+    2020: 'Net Revenue per Employee peaks at $470K. The J.D. Power comparable series begins (+27 pts).',
+    2021: 'Headcount rises 6% ahead of revenue and the Overhead Ratio jumps to 58.6%.',
+    2022: 'Pressure peaks: Overhead Ratio 59.2%, tech intensity 11.1%, branch trough 4,787, revenue per employee $438K.',
+    2023: 'Inflection year: net revenue up 23%, First Republic acquired in May, Overhead Ratio falls to 55.1%.',
+    2024: 'Overhead Ratio reaches 51.7%. Reported net revenue includes a $7.9B Visa share gain.',
+    2025: 'Latest year. Technology expense is an estimate ($17.9B est.); branches reach 5,083.'
+  };
+  var slider = $('#year-slider'), readout = $('#year-readout'), tag = $('#year-tag'), caption = $('#year-caption'), resetBtn = $('#year-reset');
+  $('.yb-ticks').innerHTML = Y.map(function (y) { return '<span>\u2019' + String(y).slice(2) + '</span>'; }).join('');
+  var registry = {};
+
+  function markYear(idx) {
+    Object.keys(registry).forEach(function (id) {
+      var r = registry[id], li = r.labels.indexOf(String(Y[idx]));
+      var m = r.chart.options.plugins.annotation.annotations.yearMarker;
+      if (li < 0 || idx === LAST) { m.display = false; } else { m.display = true; m.xMin = li; m.xMax = li; }
+      r.chart.update('none');
+    });
+  }
+  function syncYearUI(idx) {
+    slider.value = String(idx);
+    readout.textContent = String(Y[idx]);
+    tag.textContent = idx === LAST ? 'Latest' : 'vs. baseline';
+    caption.textContent = EVENTS[Y[idx]] || '';
+    slider.setAttribute('aria-valuetext', String(Y[idx]));
+    resetBtn.style.visibility = idx === LAST ? 'hidden' : 'visible';
+  }
+  function setYear(idx) { countCancel = true; syncYearUI(idx); renderScorecards(idx); markYear(idx); }
+  slider.addEventListener('input', function () { setYear(Number(slider.value)); });
+  resetBtn.addEventListener('click', function () { setYear(LAST); });
+  syncYearUI(LAST);
+
+  /* ---------- inflection explanations (HTML under each annotated chart) ---------- */
+  document.querySelectorAll('[data-note]').forEach(function (el) {
+    var n = DATA.inflections[el.getAttribute('data-note')];
+    if (!n) return;
+    el.innerHTML = '<span class="period">Inflection point, ' + n.period + '</span>' +
+      '<b>What changed:</b> ' + n.change + '<br><b>Cause:</b> ' + n.cause;
+  });
+
+  /* ---------- data table ---------- */
+  (function buildTable() {
+    var rows = [
+      { label: 'Reported Net Revenue ($B)', key: 'netRevenue', d: 1, ctx: true },
+      { label: 'Total Technology Expense ($B)', key: 'techExpense', d: 1, ctx: true, miss: 'n/d' },
+      { label: '1. Technology Expense as % of Net Revenue', key: 'techPct', d: 1, suf: '%', tag: 'Leading', miss: 'n/d' },
+      { label: '2. Active Digital Customers (millions)', key: 'active', d: 1, tag: 'Leading' },
+      { label: '3. Mobile Share of Digital Customers (%)', key: 'mobile', d: 1, suf: '%', tag: 'Leading' },
+      { label: '4. Chase Branch Count', key: 'branches', d: 0, comma: true, tag: 'Leading' },
+      { label: '5. Overhead Ratio (%)', key: 'overhead', d: 1, suf: '%', tag: 'Lagging' },
+      { label: 'Total Headcount (thousands)', key: 'headcount', d: 1, ctx: true },
+      { label: '6. Net Revenue per Employee ($ thousands)', key: 'revPerEmp', d: 0, tag: 'Lagging' },
+      { label: 'Chase J.D. Power Score (1,000-pt scale)', key: 'jdScore', d: 0, ctx: true, miss: 'n/a' },
+      { label: 'National Study Average (1,000-pt scale)', key: 'jdAvg', d: 0, ctx: true, miss: 'n/a' },
+      { label: '7. J.D. Power Satisfaction Gap vs. Study Average (points)', key: 'jdGap', d: 0, tag: 'Lagging', miss: 'n/a', plus: true }
+    ];
+    var h = '<thead><tr><th>Metric</th>' + Y.map(function (y) { return '<th>' + y + '</th>'; }).join('') + '</tr></thead><tbody>';
+    rows.forEach(function (r) {
+      var tag = r.tag ? '<span class="tag ' + (r.tag === 'Leading' ? 'lead' : 'lag') + '">' + r.tag + '</span>' : '';
+      h += '<tr class="' + (r.ctx ? 'context' : '') + '"><td>' + r.label + tag + '</td>';
+      S[r.key].forEach(function (v, i) {
+        if (v == null) { h += '<td class="nd">' + (r.miss || 'n/a') + '</td>'; return; }
+        var t = r.comma ? commas(v) : fx(v, r.d);
+        if (r.plus) t = '+' + t;
+        if (r.suf) t += r.suf;
+        var est = isEst(r.key, Y[i]);
+        h += '<td class="' + (est ? 'est' : '') + '">' + t + (est ? ' est.' : '') + '</td>';
+      });
+      h += '</tr>';
+    });
+    $('#data-table').innerHTML = h + '</tbody>';
+  })();
+
+  /* ---------- sources table ---------- */
+  (function buildSources() {
+    var h = '<thead><tr><th>Data series</th><th>Named source and date</th><th>Notes and assumptions</th></tr></thead><tbody>';
+    DATA.sources.forEach(function (s) { h += '<tr><td>' + s[0] + '</td><td>' + s[1] + '</td><td>' + s[2] + '</td></tr>'; });
+    $('#sources-table').innerHTML = h + '</tbody>';
+  })();
+
+  /* ---------- charts ---------- */
+  if (typeof Chart === 'undefined') {
+    document.querySelectorAll('.chart-err').forEach(function (el) {
+      el.style.display = 'block';
+      el.textContent = 'Chart.js did not load from the CDN. Check your internet connection and reload. The scorecards and data table still show every value.';
+    });
+    return;
+  }
+
+  // Annotation plugin (inflection points). Guarded so a missing plugin never throws.
+  try {
+    var ap = window['chartjs-plugin-annotation'];
+    if (ap) Chart.register(ap);
+  } catch (e) { /* plugin unavailable: the HTML explanations still show every inflection */ }
+
+  Chart.defaults.font.family = FONT;
+  Chart.defaults.font.size = 11;
+  Chart.defaults.color = MUTED;
+
+  // Value labels on selected points (ds.valueLabels.show lists the indexes to label), with a white halo for legibility.
+  var valueLabels = {
+    id: 'valueLabels',
+    afterDatasetsDraw: function (chart) {
+      var ctx = chart.ctx;
+      chart.data.datasets.forEach(function (ds, di) {
+        var cfg = ds.valueLabels;
+        if (!cfg) return;
+        var meta = chart.getDatasetMeta(di);
+        if (meta.hidden) return;
+        meta.data.forEach(function (el, i) {
+          var v = ds.data[i];
+          if (v == null || isNaN(v)) return;
+          if (cfg.show && cfg.show.indexOf(i) === -1) return;
+          var text = cfg.format(v, i);
+          ctx.save();
+          ctx.font = '600 11px ' + FONT;
+          ctx.textBaseline = 'bottom';
+          ctx.textAlign = 'center';
+          var w = ctx.measureText(text).width;
+          var x = Math.max(w / 2 + 1, Math.min(chart.width - w / 2 - 1, el.x));
+          var y = cfg.pos === 'base' ? chart.chartArea.bottom - 4 : el.y - 6;
+          ctx.lineJoin = 'round'; ctx.lineWidth = 3.5; ctx.strokeStyle = cfg.halo || 'rgba(255,255,255,0.92)';
+          ctx.strokeText(text, x, y);
+          ctx.fillStyle = cfg.color || INK;
+          ctx.fillText(text, x, y);
+          ctx.restore();
+        });
+      });
+    }
+  };
+
+  // Centre label for the donut.
+  var centerText = {
+    id: 'centerText',
+    afterDraw: function (chart) {
+      var o = chart.options.plugins.centerText;
+      if (!o) return;
+      var a = chart.chartArea, ctx = chart.ctx, cx = (a.left + a.right) / 2, cy = (a.top + a.bottom) / 2;
+      ctx.save();
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = INK; ctx.font = '700 20px ' + FONT;
+      ctx.fillText(o.value, cx, cy - 6);
+      ctx.fillStyle = MUTED; ctx.font = '500 11px ' + FONT;
+      ctx.fillText(o.sub, cx, cy + 12);
+      ctx.restore();
+    }
+  };
+
+  function hatch(color) {
+    var c = document.createElement('canvas'); c.width = 10; c.height = 10;
+    var x = c.getContext('2d');
+    x.fillStyle = '#EAF7F5'; x.fillRect(0, 0, 10, 10);
+    x.strokeStyle = color; x.lineWidth = 2; x.beginPath(); x.moveTo(-1, 11); x.lineTo(11, -1); x.stroke();
+    return x.createPattern(c, 'repeat');
+  }
+
+  // Inflection-point annotation: shaded band across the affected periods with a label.
+  function inflection(labels, key, dark) {
+    var n = DATA.inflections[key];
+    var a = labels.indexOf(String(n.from)), b = labels.indexOf(String(n.to));
+    return {
+      annotation: {
+        annotations: {
+          inflection: {
+            type: 'box', xMin: a - 0.45, xMax: b + 0.45,
+            backgroundColor: dark ? 'rgba(247,206,116,0.20)' : 'rgba(217,154,30,0.16)',
+            borderColor: dark ? '#F7CE74' : 'rgba(217,154,30,0.95)', borderWidth: 1.5, borderDash: [5, 4],
+            drawTime: 'beforeDatasetsDraw',
+            label: {
+              display: true, content: ['Inflection', n.period], position: { x: 'center', y: 'start' },
+              color: dark ? '#F7CE74' : '#7A4A00', backgroundColor: 'rgba(255,255,255,0)', font: { size: 11, weight: '700' }, padding: 3
+            }
+          }
+        }
+      }
+    };
+  }
+
+  var tooltipBase = { backgroundColor: INK, borderColor: 'rgba(255,255,255,0.28)', borderWidth: 1, titleColor: '#fff', bodyColor: '#E8EDF4', padding: 9, cornerRadius: 8, boxPadding: 4, titleFont: { weight: '700' } };
+  function xAxis(dark) {
+    return { grid: { display: false }, border: { color: dark ? 'rgba(255,255,255,0.28)' : '#C9D8E8' },
+      ticks: { color: dark ? '#C5D3EA' : MUTED, maxRotation: 0, autoSkip: false, callback: function (v) { return '\u2019' + String(this.getLabelForValue(v)).slice(2); } } };
+  }
+  function yAxis(o) {
+    var base = { grid: { color: GRID }, border: { display: false }, ticks: { color: MUTED, padding: 4 } };
+    Object.keys(o || {}).forEach(function (k) { if (k === 'ticks') { Object.keys(o.ticks).forEach(function (t) { base.ticks[t] = o.ticks[t]; }); } else { base[k] = o[k]; } });
+    return base;
+  }
+  function opts(plugins, scales, extra) {
+    var o = {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      layout: { padding: { top: 4, right: 4, left: 0, bottom: 0 } },
+      plugins: plugins, scales: scales
+    };
+    Object.keys(extra || {}).forEach(function (k) { o[k] = extra[k]; });
+    return o;
+  }
+  function make(id, cfg) {
+    try {
+      cfg.plugins = (cfg.plugins || []).concat([valueLabels, centerText]);
+      if (cfg.type !== 'doughnut') {
+        var pl = cfg.options.plugins;
+        pl.annotation = pl.annotation || { annotations: {} };
+        pl.annotation.annotations.yearMarker = { type: 'line', xMin: 0, xMax: 0, display: false, drawTime: 'afterDatasetsDraw',
+          borderColor: cfg.markerColor || '#0E1B2E', borderWidth: 1.5, borderDash: [3, 3] };
+      }
+      var chart = new Chart(document.getElementById(id), cfg);
+      if (cfg.type !== 'doughnut') registry[id] = { chart: chart, labels: cfg.data.labels };
+    } catch (e) {
+      var err = document.getElementById('e-' + id.replace('c-', ''));
+      if (err) { err.style.display = 'block'; err.textContent = 'This chart could not be drawn. Values are in the data table below.'; }
+    }
+  }
+
+  /* 5. Overhead Ratio (headline chart, drawn for the dark hero card) */
+  var HERO_LINE = '#A9B8FF';
+  make('c-overhead', {
+    type: 'line', markerColor: '#FFFFFF',
+    data: { labels: YL, datasets: [{
+      label: 'Overhead Ratio (%)', data: S.overhead, borderColor: HERO_LINE, backgroundColor: 'rgba(169,184,255,0.18)', fill: true,
+      borderWidth: 2.75, tension: 0.25, pointRadius: 3.75, pointHoverRadius: 6, pointBackgroundColor: '#0B2A4A', pointBorderColor: HERO_LINE, pointBorderWidth: 2,
+      valueLabels: { pos: 'above', color: '#FFFFFF', halo: 'rgba(11,42,74,0.92)', show: at(YL, [2017, 2022, 2024]), format: function (v) { return fx(v, 1) + '%'; } }
+    }] },
+    options: opts(
+      Object.assign({ legend: { display: false }, tooltip: Object.assign({}, tooltipBase, { callbacks: { label: function (c) { return ' Overhead Ratio: ' + fx(c.parsed.y, 1) + '%'; } } }) }, inflection(YL, 'overhead', true)),
+      { x: xAxis(true), y: yAxis({ min: 44, max: 68, grid: { color: 'rgba(255,255,255,0.12)' }, ticks: { color: '#C5D3EA', stepSize: 8, callback: function (v) { return v + '%'; } } }) }
+    )
+  });
+
+  /* 6. Net Revenue per Employee (bars) + headcount (line, right axis) */
+  make('c-revemp', {
+    type: 'bar',
+    data: { labels: YL, datasets: [
+      { type: 'line', label: 'Total Headcount (thousands, right axis)', data: S.headcount, yAxisID: 'y1', order: 0,
+        borderColor: SLATE, backgroundColor: '#fff', borderWidth: 2, tension: 0.25, pointRadius: 2.5, pointBackgroundColor: '#fff', pointBorderColor: SLATE, pointBorderWidth: 1.5 },
+      { type: 'bar', label: 'Net Revenue per Employee ($ thousands)', data: S.revPerEmp, yAxisID: 'y', order: 1,
+        backgroundColor: LAG, borderRadius: 3, maxBarThickness: 26,
+        valueLabels: { pos: 'above', show: at(YL, [2020, 2022, 2025]), format: function (v) { return '$' + v + 'K'; } } }
+    ] },
+    options: opts(
+      Object.assign({ legend: { display: false },
+        tooltip: Object.assign({}, tooltipBase, { callbacks: { label: function (c) {
+          return c.dataset.yAxisID === 'y1' ? ' Headcount: ' + fx(c.parsed.y, 1) + 'K' : ' Net Revenue per Employee: $' + c.parsed.y + 'K'; } } }) },
+        inflection(YL, 'revPerEmp')),
+      { x: xAxis(),
+        y: yAxis({ min: 0, max: 750, ticks: { stepSize: 250, callback: function (v) { return '$' + v + 'K'; } } }),
+        y1: { position: 'right', min: 200, max: 340, grid: { display: false }, border: { display: false }, ticks: { color: MUTED, stepSize: 70, callback: function (v) { return v + 'K'; } } } }
+    )
+  });
+
+  /* 1. Technology Expense as % of Net Revenue (bars $B + line %) */
+  var tLabels = labelsFrom(2019), tExp = sliceFrom(S.techExpense, 2019), tPct = sliceFrom(S.techPct, 2019);
+  var tN = tLabels.length, hatchFill = hatch('#62BDB5');
+  make('c-tech', {
+    type: 'bar',
+    data: { labels: tLabels, datasets: [
+      { type: 'line', label: 'Technology Expense as % of Net Revenue (right axis)', data: tPct, yAxisID: 'y1', order: 0, spanGaps: true,
+        borderColor: LEAD, backgroundColor: '#fff', borderWidth: 2.5, tension: 0.2, pointRadius: 3.5, pointHoverRadius: 6,
+        pointBackgroundColor: tLabels.map(function (l) { return isEst('techPct', Number(l)) ? '#fff' : LEAD; }),
+        pointBorderColor: LEAD, pointBorderWidth: 2,
+        segment: { borderDash: function (c) { return (c.p1DataIndex - c.p0DataIndex > 1 || c.p1DataIndex === tN - 1) ? [6, 5] : undefined; } },
+        valueLabels: { pos: 'above', show: at(tLabels, [2022, 2024, 2025]), format: function (v, i) { return fx(v, 1) + '%' + (isEst('techPct', Number(tLabels[i])) ? ' est.' : ''); } } },
+      { type: 'bar', label: 'Total Technology Expense ($B, left axis)', data: tExp, yAxisID: 'y', order: 1,
+        backgroundColor: tLabels.map(function (l) { return isEst('techExpense', Number(l)) ? hatchFill : '#A7DDD8'; }),
+        borderColor: tLabels.map(function (l) { return isEst('techExpense', Number(l)) ? '#62BDB5' : 'rgba(0,0,0,0)'; }), borderWidth: 1.5,
+        borderRadius: 3, maxBarThickness: 30,
+        valueLabels: { pos: 'base', show: at(tLabels, [2019, 2025]), color: INK, format: function (v) { return '$' + fx(v, 1) + 'B'; } } }
+    ] },
+    options: opts(
+      Object.assign({ legend: { display: false },
+        tooltip: Object.assign({}, tooltipBase, { callbacks: { label: function (c) {
+          var est = isEst(c.dataset.yAxisID === 'y1' ? 'techPct' : 'techExpense', Number(c.label)) ? ' (est.)' : '';
+          return c.dataset.yAxisID === 'y1' ? ' Technology Expense as % of Net Revenue: ' + fx(c.parsed.y, 1) + '%' + est : ' Total Technology Expense: $' + fx(c.parsed.y, 1) + 'B' + est; } } }) },
+        inflection(tLabels, 'tech')),
+      { x: xAxis(),
+        y: yAxis({ min: 0, max: 32, ticks: { stepSize: 8, callback: function (v) { return v <= 24 ? '$' + v + 'B' : ''; } } }),
+        y1: { position: 'right', min: 6, max: 13.5, grid: { display: false }, border: { display: false }, ticks: { color: MUTED, stepSize: 1.5, callback: function (v) { return (v >= 7.5 && v <= 12) ? fx(v, 1) + '%' : ''; } } } }
+    )
+  });
+
+  /* 4. Chase Branch Count (zero-based bars) */
+  make('c-branch', {
+    type: 'bar',
+    data: { labels: YL, datasets: [{
+      label: 'Chase Branch Count', data: S.branches, backgroundColor: LEAD, borderRadius: 3, maxBarThickness: 24,
+      valueLabels: { pos: 'above', show: at(YL, [2017, 2022, 2025]), format: function (v) { return commas(v); } }
+    }] },
+    options: opts(
+      Object.assign({ legend: { display: false }, tooltip: Object.assign({}, tooltipBase, { callbacks: { label: function (c) { return ' Chase Branch Count: ' + commas(c.parsed.y); } } }) },
+        inflection(YL, 'branches')),
+      { x: xAxis(), y: yAxis({ min: 0, max: 7500, ticks: { stepSize: 2500, callback: function (v) { return commas(v); } } }) }
+    )
+  });
+
+  /* 2. Active Digital Customers */
+  make('c-active', {
+    type: 'line',
+    data: { labels: YL, datasets: [{
+      label: 'Active Digital Customers (millions)', data: S.active, borderColor: LEAD, backgroundColor: 'rgba(18,163,154,0.12)', fill: true,
+      borderWidth: 2.5, tension: 0.2, pointRadius: 3.5, pointHoverRadius: 6, pointBackgroundColor: '#fff', pointBorderColor: LEAD, pointBorderWidth: 2,
+      valueLabels: { pos: 'above', show: at(YL, [2017, 2022, 2025]), format: function (v) { return fx(v, 1) + 'M'; } }
+    }] },
+    options: opts(
+      { legend: { display: false }, tooltip: Object.assign({}, tooltipBase, { callbacks: { label: function (c) { return ' Active Digital Customers: ' + fx(c.parsed.y, 1) + ' million'; } } }) },
+      { x: xAxis(), y: yAxis({ min: 40, max: 90, ticks: { stepSize: 25, callback: function (v) { return v + 'M'; } } }) }
+    )
+  });
+
+  /* 3. Mobile Share of Digital Customers */
+  make('c-mobile', {
+    type: 'line',
+    data: { labels: YL, datasets: [{
+      label: 'Mobile Share of Digital Customers (%)', data: S.mobile, borderColor: LEAD, backgroundColor: 'rgba(18,163,154,0.10)', fill: true,
+      borderWidth: 2.5, tension: 0.25, pointRadius: 3.5, pointHoverRadius: 6, pointBackgroundColor: '#fff', pointBorderColor: LEAD, pointBorderWidth: 2,
+      valueLabels: { pos: 'above', show: at(YL, [2017, 2021, 2025]), format: function (v) { return fx(v, 0) + '%'; } }
+    }] },
+    options: opts(
+      { legend: { display: false }, tooltip: Object.assign({}, tooltipBase, { callbacks: { label: function (c) { return ' Mobile Share of Digital Customers: ' + fx(c.parsed.y, 1) + '%'; } } }) },
+      { x: xAxis(), y: yAxis({ min: 55, max: 95, ticks: { stepSize: 20, callback: function (v) { return v + '%'; } } }) }
+    )
+  });
+
+  /* Donut: 2025 mobile versus digital customers not on mobile */
+  var mob = S.mobile[S.mobile.length - 1];
+  make('c-donut', {
+    type: 'doughnut',
+    data: { labels: ['On mobile', 'Not on mobile'], datasets: [{ data: [mob, Number((100 - mob).toFixed(1))], backgroundColor: [LEAD, '#D3DDEA'], borderColor: '#fff', borderWidth: 2, hoverOffset: 3 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '66%',
+      layout: { padding: 2 },
+      plugins: {
+        legend: { display: true, position: 'right', labels: { boxWidth: 12, boxHeight: 12, color: MUTED } },
+        tooltip: Object.assign({}, tooltipBase, { callbacks: { label: function (c) { return ' ' + c.label + ': ' + fx(c.parsed, 1) + '%'; } } }),
+        centerText: { value: fx(mob, 1) + '%', sub: 'on mobile' }
+      }
+    }
+  });
+
+  /* 7. J.D. Power Satisfaction Gap vs. Study Average */
+  var jLabels = labelsFrom(2020), jGap = sliceFrom(S.jdGap, 2020), jScore = sliceFrom(S.jdScore, 2020), jAvg = sliceFrom(S.jdAvg, 2020);
+  make('c-jd', {
+    type: 'bar',
+    data: { labels: jLabels, datasets: [{
+      label: 'J.D. Power Satisfaction Gap vs. Study Average (points)', data: jGap, backgroundColor: LAG, borderRadius: 3, maxBarThickness: 32,
+      valueLabels: { pos: 'above', format: function (v) { return '+' + v; } }
+    }] },
+    options: opts(
+      { legend: { display: false }, tooltip: Object.assign({}, tooltipBase, { callbacks: {
+        label: function (c) { return ' Gap vs. study average: +' + c.parsed.y + ' pts'; },
+        afterBody: function (items) { var i = items[0].dataIndex; return ['Chase score: ' + jScore[i], 'Study average: ' + jAvg[i]]; } } }) },
+      { x: xAxis(), y: yAxis({ min: 0, max: 40, ticks: { stepSize: 20, callback: function (v) { return v; } } }) }
+    )
+  });
+})();
+</script>
+</body>
+</html>
